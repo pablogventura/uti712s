@@ -1,6 +1,6 @@
 # UTi712S
 
-Extrae la matriz térmica de los BMP que guarda la cámara UNI-T UTi712S y la convierte a grados Celsius con la misma escala que usa el software de la cámara.
+Extrae la matriz térmica de los BMP que guarda la cámara UNI-T UTi712S, la convierte a grados Celsius con la misma escala que usa el software de la cámara, y permite consultar cada punto en un visor.
 
 El archivo no trae la lectura del sensor. Trae la imagen de pantalla, de 8 bits, y tres temperaturas puntuales (mínima, máxima y central). La matriz en °C es la interpolación que arma `ImageFile.dll` a partir de esos datos. Sirve para reproducir lo que muestra el programa oficial. No mejora la medición.
 
@@ -10,9 +10,37 @@ La UTi712S guarda las capturas en BMP. El sensor es de 120×90. La pantalla es d
 
 Esas tres cifras (rango, exactitud, emisividad) describen los puntos que mide la cámara. No describen el byte de cada píxel.
 
+## Instalación
+
+Hace falta Python 3.10 o posterior. Con [pipx](https://pipx.pypa.io/):
+
+```bash
+pipx install git+https://github.com/pablogventura/uti712s.git
+```
+
+Desde una copia local del repositorio:
+
+```bash
+pipx install .
+```
+
+Quedan dos comandos: `uti712s-extract` y `uti712s-view`.
+
+Pillow es opcional. Sin él se escriben el JSON y los CSV, y no los PNG. El extra se llama `png`. En el entorno de pipx:
+
+```bash
+pipx inject uti712s pillow
+```
+
+El visor usa tkinter, que no se instala por pip. En Debian o Ubuntu: `sudo apt install python3-tk`. Tiene que estar en el mismo Python que usa pipx.
+
 ## Uso
 
-Hace falta Python 3. Pillow es opcional: sin él se escriben el JSON y los CSV, y no los PNG.
+```bash
+uti712s-extract 'images/IMG 0001.bmp'
+```
+
+Sin instalar, desde el repositorio:
 
 ```bash
 python3 uti712s_extract.py 'images/IMG 0001.bmp'
@@ -29,6 +57,47 @@ Los archivos salen al lado del BMP:
 | `IMG 0001_termica_sin_indicadores.png` | La misma matriz coloreada con la paleta embebida |
 
 La fila 0 es el borde de arriba. En modo 7, que es el de las capturas de `images/`, el orden es el del archivo.
+
+## Desde Python
+
+`read_capture` lee el BMP y no escribe archivos. `celsius_at` calcula un punto con la escala de dos tramos. `extract` escribe el JSON, los CSV y, si Pillow está instalado, los PNG.
+
+```python
+from pathlib import Path
+from uti712s_extract import read_capture, extract
+
+capture = read_capture(Path("images/IMG 0001.bmp"))
+print(capture.celsius_at(119, 159))
+extract(Path("images/IMG 0001.bmp"))
+```
+
+## Visor
+
+Abre la escena térmica sin la interfaz de la cámara y muestra la temperatura estimada de cada píxel. Usa la paleta embebida y la misma escala que el CSV. Abrir un BMP no escribe archivos.
+
+```bash
+uti712s-view
+uti712s-view 'images/IMG 0001.bmp'
+```
+
+Sin instalar, desde el repositorio: `python3 uti712s_view.py` y `python3 uti712s_view.py 'images/IMG 0001.bmp'`.
+
+Archivo, Abrir, carga otro BMP. La rueda del mouse sobre la imagen cambia el zoom, de 1 a 6. Cada píxel de origen sigue siendo un bloque. La rueda sobre el panel desplaza el texto, si no entra en la ventana.
+
+El panel tiene tres bloques.
+
+**Bajo el mouse.** La temperatura en °C, con un decimal, del píxel que está bajo el puntero. También muestra la columna y la fila. La columna se cuenta desde la izquierda y la fila desde arriba. El brillo es el byte de 0 a 255 guardado en el archivo. La temperatura es la estimación en °C. Si el puntero no está sobre la imagen, el bloque pide pasar el mouse por ella.
+
+**Punto fijado.** Un clic deja esa lectura marcada, aunque el mouse se mueva. Otro clic, o Escape, la suelta. El punto se dibuja con un cuadrado rosa, un poco más grande que el píxel.
+
+**Mediciones de la cámara.** Los tres valores del pie, la emisividad y el modo.
+
+- Mínima y máxima: el punto más frío y el más caliente que midió la cámara. No se marcan en la imagen. Esas coordenadas a veces caen fuera, y no siempre coinciden con el byte más frío o más caliente.
+- Central: la lectura del centro. El cuadrado celeste queda en ese valor. Los demás píxeles se estiman a partir de estos tres.
+- Emisividad: la que tenía configurada la cámara. En estas capturas es 0,95, el valor de fábrica.
+- Modo 7: la foto no se gira. Arriba es arriba.
+
+Hay dos marcas fijas. El cuadrado celeste es el píxel de la curva. En estas capturas está en la columna 119, fila 159, y su temperatura es la central. La cruz amarilla es el centro que dibuja el software, en la columna 120, fila 160. En modo 7 son píxeles distintos. Si el mouse cae en una, el panel lo dice.
 
 ## Qué hay en el BMP
 
