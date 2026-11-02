@@ -12,16 +12,10 @@ Esas tres cifras (rango, exactitud, emisividad) describen los puntos que mide la
 
 ## Instalación
 
-Hace falta Python 3.10 o posterior. Con [pipx](https://pipx.pypa.io/):
+Hace falta Python 3.10 o posterior. El paquete está en [PyPI](https://pypi.org/project/uti712s/). Con [pipx](https://pipx.pypa.io/):
 
 ```bash
-pipx install git+https://github.com/pablogventura/uti712s.git
-```
-
-Desde una copia local del repositorio:
-
-```bash
-pipx install .
+pipx install uti712s
 ```
 
 Quedan dos comandos: `uti712s-extract` y `uti712s-view`.
@@ -33,6 +27,18 @@ pipx inject uti712s pillow
 ```
 
 El visor usa tkinter, que no se instala por pip. En Debian o Ubuntu: `sudo apt install python3-tk`. Tiene que estar en el mismo Python que usa pipx.
+
+Desde el repositorio, sin pasar por PyPI:
+
+```bash
+pipx install git+https://github.com/pablogventura/uti712s.git
+```
+
+O, desde una copia local:
+
+```bash
+pipx install .
+```
 
 ## Uso
 
