@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Visor del BMP de UNI-T UTi712S: temperatura en °C de cada píxel.
+"""Viewer for a UNI-T UTi712S BMP: Celsius temperature of each pixel.
 
-Uso:
+Usage:
     uti712s-view
     uti712s-view 'IMG 0001.bmp'
 
-La temperatura es la escala de dos tramos de ImageFile.dll, la misma que
-escribe uti712s_extract.py. Abrir un archivo no exporta JSON ni CSV.
+The temperature is the ImageFile.dll two-segment scale, the same one
+uti712s_extract.py writes. Opening a file does not export JSON or CSV.
 """
 import sys
 from pathlib import Path
@@ -16,7 +16,7 @@ try:
     import tkinter.font as tkfont
     from tkinter import filedialog, messagebox
 except ImportError:
-    sys.exit("Hace falta tkinter. En Debian o Ubuntu: sudo apt install python3-tk")
+    sys.exit("tkinter is required. On Debian or Ubuntu: sudo apt install python3-tk")
 
 from uti712s_extract import read_capture
 
@@ -39,14 +39,14 @@ class ThermalViewer:
         self._source_image = None
         self._display_image = None
 
-        self._file_name = tk.StringVar(value="Sin archivo")
+        self._file_name = tk.StringVar(value="No file")
         self._cursor_temperature = tk.StringVar(value="")
         self._cursor_detail = tk.StringVar(
-            value="Pasá el mouse por la imagen para ver la temperatura de ese píxel."
+            value="Move the pointer over the image to read that pixel's temperature."
         )
         self._pinned_temperature = tk.StringVar(value="")
         self._pinned_detail = tk.StringVar(
-            value="Ningún punto fijado. Un clic en la imagen lo deja marcado."
+            value="No point pinned. Click the image to mark one."
         )
         self._spots = tk.StringVar(value="")
         self._marks = tk.StringVar(value="")
@@ -66,7 +66,7 @@ class ThermalViewer:
         try:
             capture = read_capture(path)
         except (OSError, ValueError) as error:
-            messagebox.showerror("No se pudo abrir", str(error), parent=self.root)
+            messagebox.showerror("Could not open", str(error), parent=self.root)
             return
         self.capture = capture
         self.pinned = None
@@ -81,10 +81,10 @@ class ThermalViewer:
     def _build_widgets(self) -> None:
         menu = tk.Menu(self.root)
         file_menu = tk.Menu(menu, tearoff=0)
-        file_menu.add_command(label="Abrir...", command=self._open_dialog, accelerator="Ctrl+O")
+        file_menu.add_command(label="Open...", command=self._open_dialog, accelerator="Ctrl+O")
         file_menu.add_separator()
-        file_menu.add_command(label="Salir", command=self.root.destroy)
-        menu.add_cascade(label="Archivo", menu=file_menu)
+        file_menu.add_command(label="Quit", command=self.root.destroy)
+        menu.add_cascade(label="File", menu=file_menu)
         self.root.config(menu=menu)
 
         self.root.grid_columnconfigure(0, weight=1)
@@ -116,8 +116,8 @@ class ThermalViewer:
         self.canvas.bind("<Button-4>", self._on_wheel)
         self.canvas.bind("<Button-5>", self._on_wheel)
 
-        # El salto es en caracteres, no en un ancho fijo: con una fuente grande
-        # un wraplength corto parte cada frase en demasiadas líneas.
+        # Wrap by character count, not a fixed pixel width. A short wraplength
+        # splits every sentence when the font is large.
         digit_width = tkfont.nametofont("TkDefaultFont").measure("0")
         wraplength = digit_width * 28
         panel_width = wraplength + 16
@@ -145,21 +145,21 @@ class ThermalViewer:
         tk.Label(panel, textvariable=self._file_name, anchor="w", justify="left", wraplength=wraplength).grid(
             row=0, column=0, sticky="ew"
         )
-        self._add_section(panel, 1, "Bajo el mouse", wraplength)
+        self._add_section(panel, 1, "Under the pointer", wraplength)
         tk.Label(panel, textvariable=self._cursor_temperature, anchor="w", font=("TkDefaultFont", 18)).grid(
             row=2, column=0, sticky="w", pady=(4, 0)
         )
         tk.Label(panel, textvariable=self._cursor_detail, anchor="w", justify="left", wraplength=wraplength).grid(
             row=3, column=0, sticky="ew"
         )
-        self._add_section(panel, 4, "Punto fijado", wraplength)
+        self._add_section(panel, 4, "Pinned point", wraplength)
         tk.Label(panel, textvariable=self._pinned_temperature, anchor="w", font=("TkDefaultFont", 14)).grid(
             row=5, column=0, sticky="w", pady=(4, 0)
         )
         tk.Label(panel, textvariable=self._pinned_detail, anchor="w", justify="left", wraplength=wraplength).grid(
             row=6, column=0, sticky="ew"
         )
-        self._add_section(panel, 7, "Mediciones de la cámara", wraplength)
+        self._add_section(panel, 7, "Camera readings", wraplength)
         tk.Label(panel, textvariable=self._spots, anchor="w", justify="left", wraplength=wraplength).grid(
             row=8, column=0, sticky="ew", pady=(4, 0)
         )
@@ -169,8 +169,8 @@ class ThermalViewer:
         tk.Label(
             panel,
             text=(
-                "Rueda del mouse sobre la imagen: acerca o aleja, sin mezclar píxeles. "
-                "Un clic fija la lectura. Otro clic, o Escape, la suelta."
+                "Mouse wheel over the image: zoom in or out, keeping each pixel a block. "
+                "Click to pin the reading. Click again, or press Escape, to release it."
             ),
             anchor="w",
             justify="left",
@@ -195,7 +195,7 @@ class ThermalViewer:
     def _fit_window(self) -> None:
         self.root.update_idletasks()
         screen_h = self.root.winfo_screenheight()
-        # 960 entra en una pantalla de 1080 px. En una más alta se muestra más texto.
+        # 960 fits a 1080 px screen. A taller screen shows more of the text.
         height_cap = 1600 if screen_h > 1400 else 960
         available_h = min(max(520, screen_h - 160), height_cap)
         content_h = self.panel.winfo_reqheight()
@@ -235,9 +235,9 @@ class ThermalViewer:
             images = Path(__file__).resolve().parent / "images"
             initial = images if images.is_dir() else Path.cwd()
         selected = filedialog.askopenfilename(
-            title="Abrir BMP",
+            title="Open BMP",
             initialdir=str(initial),
-            filetypes=[("BMP", "*.bmp"), ("Todos los archivos", "*.*")],
+            filetypes=[("BMP", "*.bmp"), ("All files", "*.*")],
             parent=self.root,
         )
         if selected:
@@ -252,24 +252,24 @@ class ThermalViewer:
 
     def _fill_summary(self) -> None:
         capture = self.capture
-        emissivity = f"{capture.emissivity_raw / 100:.2f}".replace(".", ",")
+        emissivity = f"{capture.emissivity_raw / 100:.2f}"
         self._file_name.set(capture.path.name)
         if capture.emissivity_raw == 95:
             emissivity_text = (
-                f"Emisividad {emissivity}. La que tenía configurada la cámara. "
-                "0,95 es el valor de fábrica."
+                f"Emissivity {emissivity}. The value set on the camera. "
+                "0.95 is the factory setting."
             )
         else:
-            emissivity_text = f"Emisividad {emissivity}. La que tenía configurada la cámara."
+            emissivity_text = f"Emissivity {emissivity}. The value set on the camera."
         minimum = _format_measurement(capture.minimum_raw / 10, capture.unit_name)
         maximum = _format_measurement(capture.maximum_raw / 10, capture.unit_name)
         center = _format_measurement(capture.center_raw / 10, capture.unit_name)
         self._spots.set("\n\n".join((
-            f"Mínima {minimum}. El punto más frío que midió la cámara.",
-            f"Máxima {maximum}. El punto más caliente que midió la cámara.",
+            f"Minimum {minimum}. The coldest spot the camera measured.",
+            f"Maximum {maximum}. The hottest spot the camera measured.",
             (
-                f"Central {center}. La lectura del centro. El cuadrado celeste "
-                "queda en este valor. Los demás píxeles se estiman a partir de estos tres."
+                f"Center {center}. The center reading. The cyan square "
+                "lands on this value. Every other pixel is estimated from these three."
             ),
             emissivity_text,
             _mode_sentence(capture.mode),
@@ -278,12 +278,12 @@ class ThermalViewer:
 
     def _clear_cursor(self) -> None:
         self._cursor_temperature.set("")
-        self._cursor_detail.set("Pasá el mouse por la imagen para ver la temperatura de ese píxel.")
+        self._cursor_detail.set("Move the pointer over the image to read that pixel's temperature.")
 
     def _fill_pin(self) -> None:
         if self.capture is None or self.pinned is None:
             self._pinned_temperature.set("")
-            self._pinned_detail.set("Ningún punto fijado. Un clic en la imagen lo deja marcado.")
+            self._pinned_detail.set("No point pinned. Click the image to mark one.")
             return
         x, y = self.pinned
         level = self.capture.level_at(x, y)
@@ -311,8 +311,8 @@ class ThermalViewer:
                 green = palette[offset + 1]
                 blue = palette[offset + 2]
                 colors.append(f"#{red:02x}{green:02x}{blue:02x}")
-            # Cada color va entre llaves. Si no, Tk toma el # como comentario
-            # y deja el resto de la fila en negro.
+            # Brace each color. Otherwise Tk treats # as a comment and leaves
+            # the rest of the row black.
             row = "{" + " ".join("{" + color + "}" for color in colors) + "}"
             photo.put(row, to=(0, y))
         return photo
@@ -476,32 +476,32 @@ def _format_celsius(value: float) -> str:
 
 
 def _format_measurement(value: float, unit_name: str) -> str:
-    return f"{value:.1f}".replace(".", ",") + f" {unit_name}"
+    return f"{value:.1f} {unit_name}"
 
 
 _VIEWER_NOTE = (
-    "El número no es la lectura cruda del sensor. El archivo guarda una imagen "
-    "de 8 bits y tres temperaturas: la mínima, la máxima y la central. Cada píxel "
-    "se estima con la misma escala que usa el software de UNI-T."
+    "The number is not the raw sensor reading. The file stores an 8-bit image "
+    "and three temperatures: minimum, maximum, and center. Each pixel is "
+    "estimated with the same scale the UNI-T software uses."
 )
 
 
 def _point_text(x: int, y: int) -> str:
-    return f"Columna {x}, fila {y}. La columna se cuenta desde la izquierda y la fila desde arriba."
+    return f"Column {x}, row {y}. Columns count from the left and rows from the top."
 
 
 def _brightness_text(level: int) -> str:
-    return f"Brillo {level} de 255. Es el byte guardado en el archivo, no la temperatura."
+    return f"Brightness {level} of 255. This is the byte stored in the file. The temperature is the Celsius estimate."
 
 
 def _mode_sentence(mode: int) -> str:
     if mode == 1:
-        return "Modo 1. La cámara guardó la foto en otra orientación y el visor la acomoda."
+        return "Mode 1. The camera stored the photo in another orientation, and the viewer puts it back."
     if mode in (2, 5):
-        return f"Modo {mode}. La foto queda rotada 180 grados respecto del archivo."
+        return f"Mode {mode}. The photo is rotated 180 degrees from the file order."
     if mode == 7:
-        return "Modo 7. Orientación de la foto. En este modo no se gira: arriba es arriba."
-    return f"Modo {mode}. Orientación de la foto. Se deja en el orden del archivo."
+        return "Mode 7. Photo orientation. This mode does not rotate the image: the top stays the top."
+    return f"Mode {mode}. Photo orientation. The file order is kept."
 
 
 def _marks_text(capture) -> str:
@@ -509,14 +509,14 @@ def _marks_text(capture) -> str:
     cross_x, cross_y = capture.center_point
     if (curve_x, curve_y) == (cross_x, cross_y):
         return (
-            f"En esta foto el cuadrado celeste y la cruz amarilla caen en el mismo píxel, "
-            f"columna {curve_x}, fila {curve_y}. Ahí la temperatura es la central."
+            f"In this photo the cyan square and the yellow cross land on the same pixel, "
+            f"column {curve_x}, row {curve_y}. That temperature is the center reading."
         )
     return (
-        f"Cuadrado celeste: píxel de la curva, columna {curve_x}, fila {curve_y}. "
-        "Su temperatura es la central.\n"
-        f"Cruz amarilla: centro que dibuja el programa, columna {cross_x}, fila {cross_y}. "
-        "Es otro píxel y puede marcar otra temperatura."
+        f"Cyan square: curve pixel, column {curve_x}, row {curve_y}. "
+        "Its temperature is the center reading.\n"
+        f"Yellow cross: center drawn by the software, column {cross_x}, row {cross_y}. "
+        "It is a different pixel and can show a different temperature."
     )
 
 
@@ -524,18 +524,18 @@ def _role_text(capture, x: int, y: int) -> str:
     on_curve = (x, y) == capture.curve_point
     on_cross = (x, y) == capture.center_point
     if on_curve and on_cross:
-        return "Este píxel es a la vez la curva y el centro del programa."
+        return "This pixel is both the curve pixel and the software center."
     if on_curve:
-        return "Este es el píxel de la curva: su temperatura es la central."
+        return "This is the curve pixel: its temperature is the center reading."
     if on_cross:
-        return "Este es el centro que dibuja el programa. No es el píxel de la curva."
+        return "This is the center drawn by the software. It is not the curve pixel."
     return ""
 
 
 def main() -> None:
     command = Path(sys.argv[0]).name
     if len(sys.argv) > 2:
-        sys.exit(f"Uso: {command} [archivo.bmp]")
+        sys.exit(f"Usage: {command} [file.bmp]")
     path = Path(sys.argv[1]) if len(sys.argv) == 2 else None
     ThermalViewer(path).run()
 

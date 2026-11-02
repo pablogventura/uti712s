@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "uti712s"
-version = "0.1.1"
-description = "Extrae la matriz en °C de los BMP de la UNI-T UTi712S y muestra la temperatura de cada punto."
+version = "0.2.0"
+description = "Extract the Celsius matrix from UNI-T UTi712S BMP files and show the temperature of each point."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Pablo Ventura" }]

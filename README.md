@@ -1,72 +1,92 @@
 # UTi712S
 
-Extrae la matriz térmica de los BMP que guarda la cámara UNI-T UTi712S, la convierte a grados Celsius con la misma escala que usa el software de la cámara, y permite consultar cada punto en un visor.
+Extract the thermal matrix from BMP files saved by the UNI-T UTi712S, convert it to degrees Celsius with the same scale the camera software uses, and look up the temperature of each point in a viewer.
 
-El archivo no trae la lectura del sensor. Trae la imagen de pantalla, de 8 bits, y tres temperaturas puntuales (mínima, máxima y central). La matriz en °C es la interpolación que arma `ImageFile.dll` a partir de esos datos. Sirve para reproducir lo que muestra el programa oficial. No mejora la medición.
+The file does not contain the sensor reading. It contains the 8-bit screen image and three spot temperatures (minimum, maximum, and center). The Celsius matrix is the interpolation `ImageFile.dll` builds from those values. It reproduces what the official program shows. It does not improve the measurement.
 
-## La cámara
+## The camera
 
-La UTi712S guarda las capturas en BMP. El sensor es de 120×90. La pantalla es de 320×240 y el archivo sale en 240×320, el mismo recuadro girado a vertical. El rango publicado por UNI-T es de -20 °C a 400 °C, con exactitud de ±2 °C o ±2 %, el que sea mayor. La emisividad de fábrica es 0,95.
+The UTi712S stores captures as BMP files. The sensor is 120 x 90. The screen is 320 x 240, and the file comes out at 240 x 320, the same frame turned upright. The range published by UNI-T is -20 °C to 400 °C, with an accuracy of ±2 °C or ±2 %, whichever is greater. The factory emissivity is 0.95.
 
-Esas tres cifras (rango, exactitud, emisividad) describen los puntos que mide la cámara. No describen el byte de cada píxel.
+Those three figures (range, accuracy, emissivity) describe the spots the camera measures. They do not describe the byte of each pixel.
 
-## Instalación
+## Installation
 
-Hace falta Python 3.10 o posterior. El paquete está en [PyPI](https://pypi.org/project/uti712s/). Con [pipx](https://pipx.pypa.io/):
+Python 3.10 or newer is required. The package is on [PyPI](https://pypi.org/project/uti712s/). With [pipx](https://pipx.pypa.io/):
 
 ```bash
 pipx install uti712s
 ```
 
-Quedan dos comandos: `uti712s-extract` y `uti712s-view`.
+That installs two commands: `uti712s-extract` and `uti712s-view`.
 
-Pillow es opcional. Sin él se escriben el JSON y los CSV, y no los PNG. El extra se llama `png`. En el entorno de pipx:
+Pillow is optional. Without it the tool writes the JSON and the CSV files, and skips the PNG files. The extra is named `png`. Inside the pipx environment:
 
 ```bash
 pipx inject uti712s pillow
 ```
 
-El visor usa tkinter, que no se instala por pip. En Debian o Ubuntu: `sudo apt install python3-tk`. Tiene que estar en el mismo Python que usa pipx.
+The viewer uses tkinter, which is not installed by pip. On Debian or Ubuntu: `sudo apt install python3-tk`. It has to be available to the same Python that pipx uses.
 
-Desde el repositorio, sin pasar por PyPI:
+From the repository, without going through PyPI:
 
 ```bash
 pipx install git+https://github.com/pablogventura/uti712s.git
 ```
 
-O, desde una copia local:
+Or, from a local copy:
 
 ```bash
 pipx install .
 ```
 
-## Uso
+## Usage
 
 ```bash
 uti712s-extract 'images/IMG 0001.bmp'
 ```
 
-Sin instalar, desde el repositorio:
+Without installing, from the repository:
 
 ```bash
 python3 uti712s_extract.py 'images/IMG 0001.bmp'
 ```
 
-Los archivos salen al lado del BMP:
+The files are written next to the BMP:
 
-| Archivo | Contenido |
+| File | Contents |
 |---|---|
-| `IMG 0001_metadatos.json` | Temperaturas puntuales, anclas, modo y píxeles de control |
-| `IMG 0001_intensidades.csv` | Matriz de 8 bits, una fila de imagen por línea, sin encabezado |
-| `IMG 0001_celsius.csv` | La misma grilla en °C, ocho decimales |
-| `IMG 0001_intensidades.png` | La matriz en gris, sin la interfaz de la cámara |
-| `IMG 0001_termica_sin_indicadores.png` | La misma matriz coloreada con la paleta embebida |
+| `IMG 0001_metadata.json` | Spot temperatures, anchors, mode, and control pixels |
+| `IMG 0001_intensities.csv` | 8-bit matrix, one image row per line, no header |
+| `IMG 0001_celsius.csv` | The same grid in °C, eight decimal places |
+| `IMG 0001_intensities.png` | The matrix in gray, without the camera interface |
+| `IMG 0001_thermal_no_overlay.png` | The same matrix colored with the embedded palette |
 
-La fila 0 es el borde de arriba. En modo 7, que es el de las capturas de `images/`, el orden es el del archivo.
+Row 0 is the top edge. In mode 7, which is the mode of the captures in `images/`, the order is the file order.
 
-## Desde Python
+The metadata JSON uses these fields:
 
-`read_capture` lee el BMP y no escribe archivos. `celsius_at` calcula un punto con la escala de dos tramos. `extract` escribe el JSON, los CSV y, si Pillow está instalado, los PNG.
+| Field | Meaning |
+|---|---|
+| `file` | BMP file name |
+| `exported_resolution` | `[width, height]` |
+| `file_unit` | Unit stored in the file (`°C` or `°F`) |
+| `orientation_mode` | Orientation byte |
+| `maximum_temperature`, `minimum_temperature`, `center_temperature` | Footer spots, in the file unit, already divided by 10 |
+| `emissivity` | Footer byte divided by 100 |
+| `cold_anchor_intensity`, `hot_anchor_intensity` | Intensities tied to the minimum and the maximum |
+| `minimum_point_xy`, `maximum_point_xy` | Footer coordinates after the orientation transform |
+| `center_point_xy` | Center the software draws |
+| `curve_pixel_xy` | Pixel that anchors the two-segment scale |
+| `curve_intensity`, `cross_intensity` | Intensity at the curve pixel and at the drawn center |
+| `curve_celsius`, `cross_celsius` | Those two pixels in °C |
+| `minimum_intensity`, `maximum_intensity` | Lowest and highest byte in the matrix |
+| `warning` | What the Celsius matrix is, and what it is not |
+| `exports` | Paths written next to the BMP |
+
+## From Python
+
+`read_capture` reads the BMP and does not write files. `celsius_at` computes one point with the two-segment scale. `extract` writes the JSON, the CSV files, and, when Pillow is installed, the PNG files.
 
 ```python
 from pathlib import Path
@@ -77,151 +97,151 @@ print(capture.celsius_at(119, 159))
 extract(Path("images/IMG 0001.bmp"))
 ```
 
-## Visor
+## Viewer
 
-Abre la escena térmica sin la interfaz de la cámara y muestra la temperatura estimada de cada píxel. Usa la paleta embebida y la misma escala que el CSV. Abrir un BMP no escribe archivos.
+Opens the thermal scene without the camera interface and shows the estimated temperature of each pixel. It uses the embedded palette and the same scale as the CSV. Opening a BMP does not write files.
 
 ```bash
 uti712s-view
 uti712s-view 'images/IMG 0001.bmp'
 ```
 
-Sin instalar, desde el repositorio: `python3 uti712s_view.py` y `python3 uti712s_view.py 'images/IMG 0001.bmp'`.
+Without installing, from the repository: `python3 uti712s_view.py` and `python3 uti712s_view.py 'images/IMG 0001.bmp'`.
 
-Archivo, Abrir, carga otro BMP. La rueda del mouse sobre la imagen cambia el zoom, de 1 a 6. Cada píxel de origen sigue siendo un bloque. La rueda sobre el panel desplaza el texto, si no entra en la ventana.
+File, Open loads another BMP. The mouse wheel over the image changes the zoom from 1 to 6. Each source pixel stays a solid block. The wheel over the panel scrolls the text when it does not fit in the window.
 
-El panel tiene tres bloques.
+The panel has three blocks.
 
-**Bajo el mouse.** La temperatura en °C, con un decimal, del píxel que está bajo el puntero. También muestra la columna y la fila. La columna se cuenta desde la izquierda y la fila desde arriba. El brillo es el byte de 0 a 255 guardado en el archivo. La temperatura es la estimación en °C. Si el puntero no está sobre la imagen, el bloque pide pasar el mouse por ella.
+**Under the pointer.** The temperature in °C, to one decimal place, of the pixel under the pointer. It also shows the column and the row. Columns count from the left and rows from the top. Brightness is the byte from 0 to 255 stored in the file. The temperature is the Celsius estimate. When the pointer is off the image, the block asks you to move it onto the image.
 
-**Punto fijado.** Un clic deja esa lectura marcada, aunque el mouse se mueva. Otro clic, o Escape, la suelta. El punto se dibuja con un cuadrado rosa, un poco más grande que el píxel.
+**Pinned point.** A click keeps that reading in place while the pointer moves. Another click, or Escape, releases it. The point is drawn with a pink square, slightly larger than the pixel.
 
-**Mediciones de la cámara.** Los tres valores del pie, la emisividad y el modo.
+**Camera readings.** The three footer values, the emissivity, and the mode.
 
-- Mínima y máxima: el punto más frío y el más caliente que midió la cámara. No se marcan en la imagen. Esas coordenadas a veces caen fuera, y no siempre coinciden con el byte más frío o más caliente.
-- Central: la lectura del centro. El cuadrado celeste queda en ese valor. Los demás píxeles se estiman a partir de estos tres.
-- Emisividad: la que tenía configurada la cámara. En estas capturas es 0,95, el valor de fábrica.
-- Modo 7: la foto no se gira. Arriba es arriba.
+- Minimum and maximum: the coldest and hottest spots the camera measured. They are not drawn on the image. Those coordinates sometimes fall outside the frame, and they do not always match the coldest or hottest byte.
+- Center: the center reading. The cyan square lands on that value. Every other pixel is estimated from these three.
+- Emissivity: the value set on the camera. In these captures it is 0.95, the factory setting.
+- Mode 7: the photo is not rotated. The top stays the top.
 
-Hay dos marcas fijas. El cuadrado celeste es el píxel de la curva. En estas capturas está en la columna 119, fila 159, y su temperatura es la central. La cruz amarilla es el centro que dibuja el software, en la columna 120, fila 160. En modo 7 son píxeles distintos. Si el mouse cae en una, el panel lo dice.
+There are two fixed marks. The cyan square is the curve pixel. In these captures it is column 119, row 159, and its temperature is the center reading. The yellow cross is the center drawn by the software, at column 120, row 160. In mode 7 they are different pixels. When the pointer lands on one of them, the panel says which one.
 
-## Qué hay en el BMP
+## What is in the BMP
 
-Las 32 capturas de `images/` miden 230995 bytes y comparten esta forma: BMP de 16 bits, 240×320, sin compresión, y un bloque extra de 77341 bytes.
+The 32 captures in `images/` are 230995 bytes and share this shape: a 16-bit BMP, 240 x 320, uncompressed, plus an extra block of 77341 bytes.
 
-El programa oficial no lee el ancho ni el alto del encabezado. Fija 240×320 y empieza la zona térmica en el offset `0x25839` (153657). Este script lee el tamaño en el encabezado y entra en `bfSize + 3`. En un BMP de 16 bits y 240×320, `bfSize` vale 153654 (54 bytes de encabezado más 153600 de píxeles), así que `bfSize + 3` cae en el mismo byte. Además exige que el bloque extra mida `3 + ancho*alto + 512 + 26` y que arranque con tres ceros.
+The official program does not read the width or height from the header. It fixes 240 x 320 and starts the thermal area at offset `0x25839` (153657). This script reads the size from the header and enters at `bfSize + 3`. In a 16-bit 240 x 320 BMP, `bfSize` is 153654 (54 header bytes plus 153600 pixel bytes), so `bfSize + 3` lands on the same byte. It also requires the extra block to be `3 + width*height + 512 + 26` bytes and to start with three zeros.
 
 ```text
-0            encabezado BMP y píxeles de 16 bits     153654 bytes
+0            BMP header and 16-bit pixels            153654 bytes
 153654       00 00 00                                3 bytes
-153657       intensidades, 1 byte por píxel          240 * 320 = 76800
-230457       paleta RGB565, 256 colores              512
-230969       pie                                     26
-230995       fin
+153657       intensities, 1 byte per pixel           240 * 320 = 76800
+230457       RGB565 palette, 256 colors              512
+230969       footer                                  26
+230995       end
 ```
 
-El BMP visible es la pantalla: cruz, textos, batería, fecha y barra de color. La matriz de 8 bits es la escena térmica sin esa interfaz. El origen vertical coincide con la foto: arriba es arriba.
+The visible BMP is the screen: crosshair, labels, battery, date, and color bar. The 8-bit matrix is the thermal scene without that interface. The vertical origin matches the photo: the top is the top.
 
-La paleta embebida no reproduce los píxeles del BMP. En estas capturas la coincidencia exacta es prácticamente nula. La pantalla lleva la interfaz encima y usa otro estirado de color. El PNG sin indicadores muestra la escena limpia, con la paleta del archivo, no una copia de la pantalla.
+The embedded palette does not reproduce the BMP pixels. On these captures the exact match is effectively none. The screen draws the interface on top and uses a different color stretch. The PNG without the overlay shows the clean scene, with the file palette, not a copy of the screen.
 
-## Paleta
+## Palette
 
-Son 256 colores de 16 bits, little-endian, RGB565:
+256 colors, 16 bits, little-endian, RGB565:
 
-| Canal | Bits | Expansión que usa el software |
+| Channel | Bits | Expansion used by the software |
 |---|---|---|
-| Rojo | 15..11 | los 5 bits, desplazados 3 a la izquierda (máximo 248) |
-| Verde | 10..5 | los 6 bits, desplazados 2 a la izquierda |
-| Azul | 4..0 | los 5 bits, desplazados 3 a la izquierda |
+| Red | 15..11 | the 5 bits, shifted left by 3 (maximum 248) |
+| Green | 10..5 | the 6 bits, shifted left by 2 |
+| Blue | 4..0 | the 5 bits, shifted left by 3 |
 
-El índice es el byte de intensidad, sin estirar al rango de la escena.
+The index is the raw intensity byte, not stretched to the scene range.
 
-## Pie de 26 bytes
+## 26-byte footer
 
-Little-endian. Las temperaturas son enteros con signo, en décimas. Las coordenadas son enteros sin signo.
+Little-endian. Temperatures are signed integers, in tenths. Coordinates are unsigned integers.
 
-| Offset | Tipo | Campo |
+| Offset | Type | Field |
 |---|---|---|
-| 0 | uint8 | Unidad. 0 es °C, 1 es °F |
-| 1 | int16 | Temperatura máxima × 10 |
-| 3 | int16 | Temperatura mínima × 10 |
-| 5 | uint8 | Ancla caliente: intensidad que el software iguala a la máxima |
-| 6 | uint8 | Ancla fría: intensidad que el software iguala a la mínima |
-| 7 | int16 | Temperatura central × 10 |
-| 9 | uint8 | Emisividad × 100 |
-| 10 | uint8 | Modo de orientación |
-| 11 | 3 bytes | El software no los lee. En estas capturas valen 0 |
-| 14 | uint16 | X del mínimo |
-| 16 | uint16 | Y del mínimo |
-| 18 | uint16 | X del máximo |
-| 20 | uint16 | Y del máximo |
-| 22 | uint16 | X del centro guardado |
-| 24 | uint16 | Y del centro guardado |
+| 0 | uint8 | Unit. 0 is °C, 1 is °F |
+| 1 | int16 | Maximum temperature x 10 |
+| 3 | int16 | Minimum temperature x 10 |
+| 5 | uint8 | Hot anchor: intensity the software treats as the maximum |
+| 6 | uint8 | Cold anchor: intensity the software treats as the minimum |
+| 7 | int16 | Center temperature x 10 |
+| 9 | uint8 | Emissivity x 100 |
+| 10 | uint8 | Orientation mode |
+| 11 | 3 bytes | Unread by the software. In these captures they are 0 |
+| 14 | uint16 | Minimum X |
+| 16 | uint16 | Minimum Y |
+| 18 | uint16 | Maximum X |
+| 20 | uint16 | Maximum Y |
+| 22 | uint16 | Stored center X |
+| 24 | uint16 | Stored center Y |
 
-En las 32 capturas: unidad °C, emisividad 0,95, modo 7, ancla fría 0, ancla caliente igual al máximo de la matriz, centro guardado en (120, 160).
+Across the 32 captures: unit °C, emissivity 0.95, mode 7, cold anchor 0, hot anchor equal to the maximum of the matrix, stored center at (120, 160).
 
-El byte 5 y el byte 6 juntos parecen un int16. No lo son. El software los lee por separado. Como el byte 6 es 0, ese int16 coincide con la intensidad máxima, y por eso un parseo anterior lo veía como "el máximo de la matriz" metido en un solo campo.
+Bytes 5 and 6 together look like an int16. They are separate fields. The software reads them one byte at a time. Because byte 6 is 0, that int16 matches the maximum intensity, which is why an earlier parse treated it as "the matrix maximum" packed into a single field.
 
-## Modo de orientación
+## Orientation mode
 
-El modo es el byte 10. Cambia el orden de la matriz antes de convertir, y también cómo se interpretan las coordenadas de mínimo y máximo. El centro dibujado no sale del pie: el software lo fija según el modo.
+The mode is byte 10. It changes the matrix order before conversion, and also how the minimum and maximum coordinates are interpreted. The drawn center does not come from the footer: the software fixes it from the mode.
 
-| Modo | Matriz | Mínimo y máximo | Centro dibujado |
+| Mode | Matrix | Minimum and maximum | Drawn center |
 |---|---|---|---|
-| 1 | `salida[fila, col] = origen[alto * (ancho - col - 1) + fila]` | `x' = ancho - y - 1`, `y' = x - 1` | `(alto/2 - 1, ancho/2 - 1)` = (159, 119) |
-| 2 y 5 | el buffer al revés | `x' = ancho - x - 1`, `y' = alto - y - 1` | `(ancho/2 - 1, alto/2 - 1)` = (119, 159) |
-| otro, incluido el 7 | se deja como está | se dejan como están | `(ancho/2, alto/2)` = (120, 160) |
+| 1 | `output[row, col] = source[height * (width - col - 1) + row]` | `x' = width - y - 1`, `y' = x - 1` | `(height/2 - 1, width/2 - 1)` = (159, 119) |
+| 2 and 5 | the buffer reversed | `x' = width - x - 1`, `y' = height - y - 1` | `(width/2 - 1, height/2 - 1)` = (119, 159) |
+| any other, including 7 | left as stored | left as stored | `(width/2, height/2)` = (120, 160) |
 
-Las 32 capturas son modo 7. Los modos 1, 2 y 5 están implementados como en el DLL, pero este conjunto no los trae.
+All 32 captures are mode 7. Modes 1, 2, and 5 are implemented as in the DLL, but this set does not contain them.
 
-Las coordenadas de mínimo y máximo pueden caer fuera del raster. En estas fotos aparece `x = 240` o `y = 321`. El software las guarda igual, sin recortarlas. A veces el marcador cae a unos pocos píxeles del extremo de intensidad, y a veces a decenas. La temperatura puntual y el byte más frío o más caliente no son el mismo dato: el byte ya pasó por el realce de contraste.
+Minimum and maximum coordinates can fall outside the raster. These photos include `x = 240` or `y = 321`. The software stores them anyway, without clipping. Sometimes the marker is a few pixels from the intensity extreme, and sometimes tens of pixels away. The spot temperature and the coldest or hottest byte are different data: the byte has already been through contrast enhancement.
 
-## Escala a °C
+## Celsius scale
 
-El píxel de la curva no es la cruz. Después de reordenar, el software toma la intensidad `Ic` en `(ancho/2 - 1, alto/2 - 1)`. En 240×320 eso es (119, 159), un píxel arriba y a la izquierda de la cruz (120, 160).
+The curve pixel is separate from the crosshair. After reordering, the software takes intensity `Ic` at `(width/2 - 1, height/2 - 1)`. At 240 x 320 that is (119, 159), one pixel up and to the left of the crosshair (120, 160).
 
-Con las temperaturas todavía en décimas:
+With temperatures still in tenths:
 
-- si la intensidad `p` es mayor o igual que `Ic`, la recta une `(ancla caliente, máxima)` con `(Ic, central)`;
-- si es menor, une `(Ic, central)` con `(ancla fría, mínima)`.
+- if intensity `p` is greater than or equal to `Ic`, the line joins `(hot anchor, maximum)` to `(Ic, center)`;
+- if it is lower, the line joins `(Ic, center)` to `(cold anchor, minimum)`.
 
 ```text
 raw = p * (Tb - Ta) / (Ib - Ia) + (Ta * Ib - Tb * Ia) / (Ib - Ia)
 °C  = raw / 10
 ```
 
-`(Ia, Ta)` es el primer punto del tramo y `(Ib, Tb)` el segundo. Si el archivo está en Fahrenheit, este script pasa el resultado a Celsius con `(°F - 32) / 1.8`. El programa oficial, en ese caso, deja la primera matriz en la unidad del archivo y arma otra con `valor * 1.8 + 32`. En las capturas de `images/` la unidad es °C, así que el CSV coincide con la matriz del programa.
+`(Ia, Ta)` is the first point of the segment and `(Ib, Tb)` the second. When the file is in Fahrenheit, this script converts the result to Celsius with `(°F - 32) / 1.8`. The official program, in that case, keeps the first matrix in the file unit and builds another with `value * 1.8 + 32`. The captures in `images/` are in °C, so the CSV matches the program's matrix.
 
-El píxel de la curva queda, por construcción, en la temperatura central. La cruz no. En `IMG 0001.bmp`:
+By construction, the curve pixel equals the center temperature. The crosshair does not. In `IMG 0001.bmp`:
 
-| | Intensidad | °C |
+| | Intensity | °C |
 |---|---|---|
-| Curva (119, 159) | 17 | 13,3 |
-| Cruz (120, 160) | 16 | 12,84705882 |
-| Ancla fría | 0 | 5,6 |
-| Píxel más frío de esa foto | 1 | 6,05294118 |
-| Ancla caliente | 253 | 21,6 |
+| Curve (119, 159) | 17 | 13.3 |
+| Crosshair (120, 160) | 16 | 12.84705882 |
+| Cold anchor | 0 | 5.6 |
+| Coldest pixel in that photo | 1 | 6.05294118 |
+| Hot anchor | 253 | 21.6 |
 
-La mínima del pie es 5,6 °C y la máxima 21,6 °C. El píxel más frío no llega a 5,6 °C porque la ancla fría está en la intensidad 0 y ese píxel vale 1.
+The footer minimum is 5.6 °C and the maximum is 21.6 °C. The coldest pixel does not reach 5.6 °C because the cold anchor is intensity 0 and that pixel is 1.
 
-## Lo que no se puede recuperar
+## What cannot be recovered
 
-El sensor entrega bastante más que 8 bits. Antes de guardar, la cámara realza el contraste y estira el resultado a 240×320. Muchas temperaturas distintas caen en el mismo byte, y la tabla de ese realce no viaja en el archivo. Con tres puntos medidos se puede clavar la curva en la mínima, la máxima y el centro. Cualquier otro píxel sigue siendo una estimación, y otra curva que pase por los mismos tres puntos no está mejor medida.
+The sensor delivers much more than 8 bits. Before saving, the camera enhances contrast and stretches the result to 240 x 320. Many different temperatures land on the same byte, and the table for that enhancement is not in the file. Three measured points can pin the curve to the minimum, the maximum, and the center. Any other pixel remains an estimate, and another curve through the same three points is not a better measurement.
 
-El error acompaña el rango de la escena. Con menos de 2 °C de diferencia, como en `IMG 0008.bmp` o `IMG 0031.bmp`, queda por debajo de 0,1 °C. En `IMG 0001.bmp` la cruz ya difiere 0,45 °C de la medición central. En una escena de cientos de grados la diferencia es de decenas de grados.
+The error follows the span of the scene. With less than 2 °C of difference, as in `IMG 0008.bmp` or `IMG 0031.bmp`, it stays under 0.1 °C. In `IMG 0001.bmp` the crosshair already differs by 0.45 °C from the center measurement. In a scene of hundreds of degrees the difference is tens of degrees.
 
-`IMG 0003.bmp` guarda una máxima de 431,7 °C y la pantalla muestra OL. `IMG 0004.bmp` guarda 429,6 °C, por encima del rango de -20 °C a 400 °C publicado para esta cámara. Esos máximos están en el archivo, y la cámara no los trata como una lectura normal.
+`IMG 0003.bmp` stores a maximum of 431.7 °C and the screen shows OL. `IMG 0004.bmp` stores 429.6 °C, above the -20 °C to 400 °C range published for this camera. Those maxima are in the file, and the camera does not treat them as a normal reading.
 
-Para un punto que importe, la lectura que vale es la del puntero en la cámara.
+For a point that matters, the reading to trust is the spot tool on the camera.
 
-## Software oficial y otros parseos
+## Official software and other parsers
 
-UNI-T publica el UTi712S PC Software (junio de 2022, un `Setup.exe` de Windows dentro del zip). La lógica de este formato está en `ImageFile.dll`, en `refreshParam` y en el pasaje de intensidad a temperatura. Este repositorio no incluye ese instalador.
+UNI-T publishes the UTi712S PC Software (June 2022, a Windows `Setup.exe` inside the zip). The logic for this format is in `ImageFile.dll`, in `refreshParam` and in the intensity-to-temperature step. This repository does not include that installer.
 
-El programa oficial hace esta misma escala de dos tramos. No tiene un plano radiométrico escondido.
+The official program uses this same two-segment scale. It does not hide a radiometric plane.
 
-[UNI-T Thermal Utilities](https://github.com/Santi-hr/UNI-T-Thermal-Utilities) documenta un BMP parecido, el de la UTi260B. No sirve para estos archivos: aquella cámara guarda BMP de 24 bits, sin los 3 bytes de relleno, y ordena primero el punto máximo. El autor describe el mismo límite en [temperature_issue.md](https://github.com/Santi-hr/UNI-T-Thermal-Utilities/blob/main/docs/temperature_issue.md): la imagen embebida ya viene realzada, y en el postproceso solo se pueden fiar la mínima, la máxima y el centro.
+[UNI-T Thermal Utilities](https://github.com/Santi-hr/UNI-T-Thermal-Utilities) documents a similar BMP, the one from the UTi260B. It does not apply to these files: that camera stores 24-bit BMPs, without the 3 pad bytes, and lists the maximum point first. The author describes the same limit in [temperature_issue.md](https://github.com/Santi-hr/UNI-T-Thermal-Utilities/blob/main/docs/temperature_issue.md): the embedded image is already contrast-enhanced, and after the fact only the minimum, the maximum, and the center can be trusted.
 
-## Muestras
+## Samples
 
-`images/` tiene 32 BMP sacados de una UTi712S, de septiembre de 2020 a agosto de 2026. Todas entran en el formato de arriba, en modo 7 y en °C. Sirven para comprobar el parseo y la escala. No son una calibración.
+`images/` contains 32 BMPs taken with a UTi712S, from September 2020 to August 2026. All of them match the format above, in mode 7 and in °C. They are there to check the parser and the scale. They are not a calibration.
